@@ -1,7 +1,7 @@
 
 output "prod_id" {
   description = "ID of the prod instance"
-  value       = data.aws_instances.prod_id
+  value       = data.aws_instance.prod_id
 }
 
 output "prod_ami" {

@@ -66,7 +66,7 @@ resource "aws_route_table_association" "public_subnet_assoc" {
 
 resource "aws_ami_from_instance" "copy_of_prod" {
   name               = "vue-project-copy"
-  source_instance_id = data.aws_instances.prod_id.ids[0]
+  source_instance_id = data.aws_instance.prod_id.id
 }
 
 resource "aws_network_interface" "public_network" {
@@ -76,6 +76,10 @@ resource "aws_network_interface" "public_network" {
     Name = "primary_network_interface"
   }
 }
+# resource "aws_network_interface_sg_attachment" "sg_attachment" {
+#   security_group_id    = "sg-013359c823747f269"
+#   network_interface_id = aws_network_interface.public_network.id
+# }
 
 resource "aws_instance" "vue-project" {
   ami = data.aws_ami.prod_ami.id
@@ -92,5 +96,7 @@ resource "aws_instance" "vue-project" {
 
 resource "aws_eip_association" "eip_assoc" {
   instance_id   = aws_instance.vue-project.id
-  allocation_id = aws_eip.example.id
+  allocation_id = data.aws_eips.elastic_ip.allocation_ids[0]
 }
+
+
