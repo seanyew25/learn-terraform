@@ -16,7 +16,9 @@ provider "aws" {
 # create subnets in existing vpc
 
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
   tags = {
     Name = "Vue Project Environment"
   }
@@ -70,32 +72,84 @@ resource "aws_ami_from_instance" "copy_of_prod" {
 }
 
 resource "aws_network_interface" "public_network" {
-  subnet_id = aws_subnet.public_subnet.id
+  subnet_id   = aws_subnet.public_subnet.id
   private_ips = ["10.0.1.5"]
   tags = {
     Name = "primary_network_interface"
   }
 }
-# resource "aws_network_interface_sg_attachment" "sg_attachment" {
-#   security_group_id    = "sg-013359c823747f269"
-#   network_interface_id = aws_network_interface.public_network.id
-# }
+
+
+resource "aws_security_group" "security_group" {
+  name        = "vue-project"
+  description = "security group for vue-project"
+  vpc_id      = aws_vpc.main.id
+
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_http" {
+  security_group_id = aws_security_group.security_group.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 80
+  to_port           = 80
+
+}
+resource "aws_vpc_security_group_ingress_rule" "allow_https" {
+  security_group_id = aws_security_group.security_group.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_postgres" {
+  security_group_id = aws_security_group.security_group.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 5432
+  to_port           = 5432
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
+  security_group_id = aws_security_group.security_group.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 22
+  to_port           = 22
+}
+
+resource "aws_vpc_security_group_egress_rule" "allow_all_egress_traffic" {
+  security_group_id = aws_security_group.security_group.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1" # semantically equivalent to all ports
+}
+
+resource "aws_network_interface_sg_attachment" "sg_attachment" {
+  security_group_id    = aws_security_group.security_group.id
+  network_interface_id = aws_network_interface.public_network.id
+}
 
 resource "aws_instance" "vue-project" {
-  ami = data.aws_ami.prod_ami.id
-  instance_type = "t2.micro"
+  ami                         = data.aws_ami.prod_ami.id
+  instance_type               = var.instance_type
+  key_name                    = var.key-pair_name
+  # associate_public_ip_address = true
+  # security_groups             = var.security_groups
+
   tags = {
     Name = "vue-project-prod"
   }
   network_interface {
     network_interface_id = aws_network_interface.public_network.id
-    device_index = 0
+    device_index         = 0
   }
 }
 
 
 resource "aws_eip_association" "eip_assoc" {
-  instance_id   = aws_instance.vue-project.id
+  # instance_id   = aws_instance.vue-project.id
+  network_interface_id = aws_network_interface.public_network.id
   allocation_id = data.aws_eips.elastic_ip.allocation_ids[0]
 }
 
