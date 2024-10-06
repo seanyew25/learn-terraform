@@ -1,0 +1,184 @@
+{
+  "Books": [
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "1"
+          },
+          "BookTitle": {
+            "S": "The Great Gatsby"
+          },
+          "author": {
+            "S": "F. Scott Fitzgerald"
+          },
+          "DatePublished": {
+            "S": "1925-04-10"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "2"
+          },
+          "BookTitle": {
+            "S": "To Kill a Mockingbird"
+          },
+          "author": {
+            "S": "Harper Lee"
+          },
+          "DatePublished": {
+            "S": "1960-07-11"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "3"
+          },
+          "BookTitle": {
+            "S": "1984"
+          },
+          "author": {
+            "S": "George Orwell"
+          },
+          "DatePublished": {
+            "S": "1949-06-08"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "4"
+          },
+          "BookTitle": {
+            "S": "Pride and Prejudice"
+          },
+          "author": {
+            "S": "Jane Austen"
+          },
+          "DatePublished": {
+            "S": "1813-01-28"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "5"
+          },
+          "BookTitle": {
+            "S": "The Catcher in the Rye"
+          },
+          "author": {
+            "S": "J.D. Salinger"
+          },
+          "DatePublished": {
+            "S": "1951-07-16"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "6"
+          },
+          "BookTitle": {
+            "S": "The Hobbit"
+          },
+          "author": {
+            "S": "J.R.R. Tolkien"
+          },
+          "DatePublished": {
+            "S": "1937-09-21"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "7"
+          },
+          "BookTitle": {
+            "S": "Fahrenheit 451"
+          },
+          "author": {
+            "S": "Ray Bradbury"
+          },
+          "DatePublished": {
+            "S": "1953-10-19"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "8"
+          },
+          "BookTitle": {
+            "S": "Brave New World"
+          },
+          "author": {
+            "S": "Aldous Huxley"
+          },
+          "DatePublished": {
+            "S": "1932-08-30"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "9"
+          },
+          "BookTitle": {
+            "S": "Moby Dick"
+          },
+          "author": {
+            "S": "Herman Melville"
+          },
+          "DatePublished": {
+            "S": "1851-11-14"
+          }
+        }
+      }
+    },
+    {
+      "PutRequest": {
+        "Item": {
+          "ID": {
+            "N": "10"
+          },
+          "BookTitle": {
+            "S": "War and Peace"
+          },
+          "author": {
+            "S": "Leo Tolstoy"
+          },
+          "DatePublished": {
+            "S": "1869-01-01"
+          }
+        }
+      }
+    }
+  ]
+}

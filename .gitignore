@@ -1,1 +1,2 @@
-.terraform/
+/launch-vue-project/.terraform/
+/api-gateway/.terraform/
