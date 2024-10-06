@@ -1,10 +1,9 @@
 import json
 import boto3
-from decimal import Decimal
 
 client = boto3.client('dynamodb')
 dynamodb = boto3.resource("dynamodb")
-table = dynamodb.Table('http-crud-tutorial-items')
+table = dynamodb.Table('Books')
 tableName = 'Books'
 
 
@@ -18,15 +17,15 @@ def lambda_handler(event, context):
 
     try:
         if event['routeKey'] == "DELETE /books/{id}":
-            table.delete_book(
+            table.delete_item(
                 Key={'id': event['pathParameters']['id']})
             body = 'Deleted item ' + event['pathParameters']['id']
         elif event['routeKey'] == "GET /books/{id}":
-            body = table.get_book(
+            body = table.get_item(
                 Key={'id': event['pathParameters']['id']})
             body = body["Item"]
             responseBody = [
-                {'price': float(body['price']), 'id': body['id'], 'name': body['name']}]
+                {'ID': body["ID"], 'BookTitle': body["BookTitle"], 'author': body['author']}]
             body = responseBody
         elif event['routeKey'] == "GET /items":
             body = table.scan()
@@ -36,16 +35,17 @@ def lambda_handler(event, context):
             responseBody = []
             for items in body:
                 responseItems = [
-                    {'price': float(items['price']), 'id': items['id'], 'name': items['name']}]
+                    {'ID': body["ID"], 'BookTitle': body["BookTitle"], 'author': body['author']}
+                ]
                 responseBody.append(responseItems)
             body = responseBody
         elif event['routeKey'] == "PUT /items":
             requestJSON = json.loads(event['body'])
             table.put_item(
                 Item={
-                    'id': requestJSON['id'],
-                    'price': Decimal(str(requestJSON['price'])),
-                    'name': requestJSON['name']
+                    'ID': requestJSON["ID"], 
+                    'BookTitle': requestJSON["BookTitle"], 
+                    'author': requestJSON['author']}
                 })
             body = 'Put item ' + requestJSON['id']
     except KeyError:
