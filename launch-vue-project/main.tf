@@ -66,10 +66,12 @@ resource "aws_route_table_association" "public_subnet_assoc" {
   subnet_id      = aws_subnet.public_subnet.id
 }
 
-resource "aws_ami_from_instance" "copy_of_prod" {
-  name               = "vue-project-copy"
-  source_instance_id = data.aws_instance.prod_id.id
-}
+
+#Delete ami
+# resource "aws_ami_from_instance" "copy_of_prod" {
+#   name               = "vue-project-copy"
+#   source_instance_id = data.aws_instance.prod_id.id
+# }
 
 resource "aws_network_interface" "public_network" {
   subnet_id   = aws_subnet.public_subnet.id
@@ -139,6 +141,10 @@ resource "aws_instance" "vue-project" {
 
   tags = {
     Name = "vue-project-prod"
+  }
+  
+  lifecycle {
+    ignore_changes = [ami]
   }
   network_interface {
     network_interface_id = aws_network_interface.public_network.id
