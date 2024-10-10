@@ -9,7 +9,7 @@
           "BookTitle": {
             "S": "The Great Gatsby"
           },
-          "author": {
+          "Author": {
             "S": "F. Scott Fitzgerald"
           },
           "DatePublished": {
@@ -27,7 +27,7 @@
           "BookTitle": {
             "S": "To Kill a Mockingbird"
           },
-          "author": {
+          "Author": {
             "S": "Harper Lee"
           },
           "DatePublished": {
@@ -45,7 +45,7 @@
           "BookTitle": {
             "S": "1984"
           },
-          "author": {
+          "Author": {
             "S": "George Orwell"
           },
           "DatePublished": {
@@ -63,7 +63,7 @@
           "BookTitle": {
             "S": "Pride and Prejudice"
           },
-          "author": {
+          "Author": {
             "S": "Jane Austen"
           },
           "DatePublished": {
@@ -81,7 +81,7 @@
           "BookTitle": {
             "S": "The Catcher in the Rye"
           },
-          "author": {
+          "Author": {
             "S": "J.D. Salinger"
           },
           "DatePublished": {
@@ -99,7 +99,7 @@
           "BookTitle": {
             "S": "The Hobbit"
           },
-          "author": {
+          "Author": {
             "S": "J.R.R. Tolkien"
           },
           "DatePublished": {
@@ -117,7 +117,7 @@
           "BookTitle": {
             "S": "Fahrenheit 451"
           },
-          "author": {
+          "Author": {
             "S": "Ray Bradbury"
           },
           "DatePublished": {
@@ -135,7 +135,7 @@
           "BookTitle": {
             "S": "Brave New World"
           },
-          "author": {
+          "Author": {
             "S": "Aldous Huxley"
           },
           "DatePublished": {
@@ -153,7 +153,7 @@
           "BookTitle": {
             "S": "Moby Dick"
           },
-          "author": {
+          "Author": {
             "S": "Herman Melville"
           },
           "DatePublished": {
@@ -171,7 +171,7 @@
           "BookTitle": {
             "S": "War and Peace"
           },
-          "author": {
+          "Author": {
             "S": "Leo Tolstoy"
           },
           "DatePublished": {

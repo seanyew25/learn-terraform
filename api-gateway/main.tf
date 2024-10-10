@@ -18,7 +18,7 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   read_capacity  = 5
   write_capacity = 5
   hash_key       = "ID"
-  range_key      = "BookTitle"
+  # range_key      = "BookTitle"
 
   attribute {
     name = "ID"
@@ -31,19 +31,28 @@ resource "aws_dynamodb_table" "dynamodb_table" {
   }
 
   attribute {
-    name = "Author"
+    name = "author"
     type = "S"
   }
 
 
-
+# by defining this in the secondary index, author does not need to be part of the key when you query the table
+# however, the ID attribute needs to be part of the key when you query the table
+# if we make the book title a range key, to query the table, we need to provide the ID and the BookTitle
   global_secondary_index {
     name               = "AuthorIndex"
-    hash_key           = "Author"
-    write_capacity     = 5
-    read_capacity      = 5
-    projection_type    = "INCLUDE"
-    non_key_attributes = ["BookTitle"]
+    hash_key           = "author"
+    write_capacity     = 2
+    read_capacity      = 2
+    projection_type    = "ALL"
+  }
+
+  global_secondary_index {
+    name               = "BookIndex"
+    hash_key           = "BookTitle"
+    write_capacity     = 2
+    read_capacity      = 2
+    projection_type    = "ALL"
   }
 
   provisioner "local-exec" {
@@ -81,7 +90,8 @@ resource "aws_iam_policy" "manage_dynamo_db" {
           "dynamodb:Scan",
           "dynamodb:BatchWriteItem",
           "dynamodb:PutItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
         ],
         "Resource" : "arn:aws:dynamodb:*:*:table/Books"
       },
@@ -153,8 +163,10 @@ resource "aws_lambda_permission" "apigw_lambda" {
 
   principal = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_api_gateway_rest_api.books_api.execution_arn}/*/*"
-
+  source_arn = "${aws_api_gateway_rest_api.books_api.execution_arn}/*"
+  # source_arn = "${aws_api_gateway_rest_api.books_api.execution_arn}/* means that all routes are fine as per documentation
+  # source_arn = "${aws_api_gateway_rest_api.books_api.execution_arn}/*/* also works...
+  # don't know why source_arn = "${aws_api_gateway_rest_api.books_api.execution_arn}/*/*/* does not work"
 }
 resource "aws_api_gateway_resource" "books_root" {
 
@@ -163,6 +175,16 @@ resource "aws_api_gateway_resource" "books_root" {
   parent_id = aws_api_gateway_rest_api.books_api.root_resource_id
 
   path_part = "books"
+
+}
+
+resource "aws_api_gateway_resource" "books_resource" {
+
+  rest_api_id = aws_api_gateway_rest_api.books_api.id
+
+  parent_id = aws_api_gateway_resource.books_root.id
+
+  path_part = "{id}"
 
 }
 
@@ -178,54 +200,82 @@ resource "aws_api_gateway_resource" "books_root" {
 
 # }
 
-resource "aws_api_gateway_method" "get_method" {
+resource "aws_api_gateway_method" "root_method" {
 
   rest_api_id = aws_api_gateway_rest_api.books_api.id
 
   resource_id = aws_api_gateway_resource.books_root.id
 
   http_method = "ANY"
+  # don't know why cannot be GET
 
   authorization = "NONE"
 
 }
 
+resource "aws_api_gateway_method" "resource_method" {
+
+  rest_api_id = aws_api_gateway_rest_api.books_api.id
+
+  resource_id = aws_api_gateway_resource.books_resource.id
+
+  http_method = "ANY"
+  # don't know why cannot be GET
+
+  authorization = "NONE"
+
+}
+
+
 resource "aws_api_gateway_integration" "api_lambda" {
   rest_api_id             = aws_api_gateway_rest_api.books_api.id
   type                    = "AWS_PROXY"
   resource_id             = aws_api_gateway_resource.books_root.id
-  http_method             = aws_api_gateway_method.get_method.http_method
+  http_method             = aws_api_gateway_method.root_method.http_method
+  uri                     = aws_lambda_function.books_lambda.invoke_arn
+  integration_http_method = "POST"
+}
+
+resource "aws_api_gateway_integration" "api_resource_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.books_api.id
+  type                    = "AWS_PROXY"
+  resource_id             = aws_api_gateway_resource.books_resource.id
+  http_method             = aws_api_gateway_method.root_method.http_method
   uri                     = aws_lambda_function.books_lambda.invoke_arn
   integration_http_method = "POST"
 }
 
 resource "aws_api_gateway_deployment" "books_deployment" {
-  # depends_on = [
+  depends_on = [
 
-  # aws_api_gateway_integration.lambda_integration,
+  aws_api_gateway_integration.api_lambda,
 
-  # aws_api_gateway_integration.options_integration, # Add this line
+  aws_api_gateway_integration.api_resource_lambda, 
 
-  # ]
+  ]
   rest_api_id = aws_api_gateway_rest_api.books_api.id
   stage_name  = "dev"
 
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.books_root.id,
-      aws_api_gateway_method.get_method.id,
+      aws_api_gateway_method.root_method.id,
       aws_api_gateway_integration.api_lambda.id,
+      aws_api_gateway_resource.books_resource.id,
+      aws_api_gateway_method.resource_method.id,
+      aws_api_gateway_integration.api_resource_lambda.id,
     ]))
   }
 }
 
+# creates the response
 resource "aws_api_gateway_method_response" "proxy" {
 
   rest_api_id = aws_api_gateway_rest_api.books_api.id
 
   resource_id = aws_api_gateway_resource.books_root.id
 
-  http_method = aws_api_gateway_method.get_method.http_method
+  http_method = aws_api_gateway_method.root_method.http_method
 
   status_code = "200"
 
@@ -248,14 +298,14 @@ resource "aws_api_gateway_method_response" "proxy" {
 }
 
 
-
+# integrates response with lambda so lambda can send back a response object
 resource "aws_api_gateway_integration_response" "proxy" {
 
   rest_api_id = aws_api_gateway_rest_api.books_api.id
 
   resource_id = aws_api_gateway_resource.books_root.id
 
-  http_method = aws_api_gateway_method.get_method.http_method
+  http_method = aws_api_gateway_method.root_method.http_method
 
   status_code = aws_api_gateway_method_response.proxy.status_code
 
@@ -279,7 +329,7 @@ resource "aws_api_gateway_integration_response" "proxy" {
 
   depends_on = [
 
-    aws_api_gateway_method.get_method,
+    aws_api_gateway_method.root_method,
 
     aws_api_gateway_integration.api_lambda
 

@@ -7,5 +7,5 @@ output "api_url" {
 }
 
 output "http_method" {
-  value = aws_api_gateway_method.get_method.http_method
+  value = aws_api_gateway_method.root_method.http_method
 }
