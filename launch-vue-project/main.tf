@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.16"
+      version = "~> 5.57.0"
     }
   }
 }
@@ -133,16 +133,16 @@ resource "aws_network_interface_sg_attachment" "sg_attachment" {
 }
 
 resource "aws_instance" "vue-project" {
-  ami                         = data.aws_ami.prod_ami.id
-  instance_type               = var.instance_type
-  key_name                    = var.key-pair_name
+  ami           = "ami-0e8fa92930184a871"
+  instance_type = var.instance_type
+  key_name      = var.key-pair_name
   # associate_public_ip_address = true
   # security_groups             = var.security_groups
 
   tags = {
     Name = "vue-project-prod"
   }
-  
+
   lifecycle {
     ignore_changes = [ami]
   }
@@ -156,7 +156,163 @@ resource "aws_instance" "vue-project" {
 resource "aws_eip_association" "eip_assoc" {
   # instance_id   = aws_instance.vue-project.id
   network_interface_id = aws_network_interface.public_network.id
-  allocation_id = data.aws_eips.elastic_ip.allocation_ids[0]
+  allocation_id        = data.aws_eips.elastic_ip.allocation_ids[0]
+}
+
+resource "aws_security_group" "vpc_endpoint" {
+  name        = "endpoint"
+  description = "security group for vpc endpoint"
+  vpc_id      = aws_vpc.main.id
+
+}
+
+resource "aws_vpc_security_group_ingress_rule" "endpoint_allow_https" {
+  security_group_id = aws_security_group.vpc_endpoint.id
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_egress_rule" "endpoint_allow_all_egress_traffic" {
+  security_group_id = aws_security_group.vpc_endpoint.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1" # semantically equivalent to all ports
+}
+
+resource "aws_vpc_endpoint" "api_gw" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.ap-southeast-1.execute-api"
+  vpc_endpoint_type = "Interface"
+  tags = {
+    Name = "api-gateway"
+  }
+  subnet_configuration {
+    ipv4      = "10.0.2.10"
+    subnet_id = aws_subnet.private_subnet.id
+  }
+  subnet_ids         = [aws_subnet.private_subnet.id]
+  security_group_ids = [aws_security_group.vpc_endpoint.id]
+
+}
+
+resource "aws_api_gateway_rest_api" "s3_api" {
+  name = "s3-api"
+  description = "api to create pre-signed urls with s3"
+
+  endpoint_configuration {
+    types            = ["PRIVATE"]
+    vpc_endpoint_ids = [aws_vpc_endpoint.api_gw.id]
+  }
+
+}
+
+resource "aws_api_gateway_resource" "s3_resource" {
+  parent_id   = aws_api_gateway_rest_api.s3_api.root_resource_id
+  path_part   = "img"
+  rest_api_id = aws_api_gateway_rest_api.s3_api.id
+}
+
+resource "aws_api_gateway_method" "s3" {
+  authorization = "NONE"
+  http_method   = "ANY"
+  resource_id   = aws_api_gateway_resource.s3_resource.id
+  rest_api_id   = aws_api_gateway_rest_api.s3_api.id
+}
+
+# create resource policy for vpc to access this api
+resource "aws_api_gateway_rest_api_policy" "rest_api" {
+  rest_api_id = aws_api_gateway_rest_api.s3_api.id
+  policy      = data.aws_iam_policy_document.assume_role_vpc.json
+}
+
+resource "aws_s3_bucket" "img-storage" {
+  bucket = "img-storage"
+
+  tags = {
+    Name = "website_img_storage"
+  }
+}
+resource "aws_iam_policy" "crud_s3" {
+  name = "crud_s3"
+  path = "/"
+  description = "policy to allow crud operations on s3"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement: [
+      {
+        Effect: "Allow",
+        Action: [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ],
+        Resource: [
+          "${aws_s3_bucket.img-storage.arn}/*"
+        ]
+      }
+    ]
+  })
+
+}
+resource "aws_iam_role_policy_attachment" "attach_to_s3" {
+  role = data.aws_iam_role.lambda_iam.name
+  policy_arn = aws_iam_policy.crud_s3.arn
+}
+
+resource "aws_lambda_function" "img_lambda" {
+  filename      = "generateURL.zip"
+  function_name = "generateURL"
+  role          = data.aws_iam_role.lambda_iam.arn
+  handler = "generateURL.lambda_handler"
+  runtime = "python3.9"
+  source_code_hash = data.archive_file.api_lambda_package.output_base64sha256
+}
+
+resource "aws_api_gateway_integration" "api_lambda" {
+  rest_api_id             = aws_api_gateway_rest_api.s3_api.id
+  type                    = "AWS_PROXY"
+  resource_id             = aws_api_gateway_resource.s3_resource.id
+  http_method             = aws_api_gateway_method.s3.http_method
+  uri                     = aws_lambda_function.img_lambda.invoke_arn
+  integration_http_method = "POST"
+}
+
+resource "aws_api_gateway_method_response" "proxy" {
+
+  rest_api_id = aws_api_gateway_rest_api.s3_api.id
+
+  resource_id = aws_api_gateway_resource.s3_resource.id
+
+  http_method = aws_api_gateway_method.s3.http_method
+
+  status_code = "200"
+
+
+
+  //cors section
+
+  response_parameters = {
+
+    "method.response.header.Access-Control-Allow-Headers" = true,
+
+    "method.response.header.Access-Control-Allow-Methods" = true,
+
+    "method.response.header.Access-Control-Allow-Origin" = true
+
+  }
+
 }
 
 
+resource "aws_api_gateway_deployment" "s3_api" {
+  rest_api_id = aws_api_gateway_rest_api.s3_api.id
+  stage_name = "prod"
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_method.s3.id,
+      aws_api_gateway_resource.s3_resource.id,
+    ]))
+  }
+}

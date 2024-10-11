@@ -36,3 +36,4 @@ data "archive_file" "api_lambda_package" {
   output_path = "booksLambdaFunction.zip"
 
 }
+
