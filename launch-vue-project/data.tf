@@ -19,9 +19,10 @@ data "aws_eips" "elastic_ip" {
 
 data "aws_iam_policy_document" "assume_role_vpc" {
   statement {
+    effect = "Allow"
     sid = "assume_role_vpc"
     actions   = ["execute-api:Invoke"]
-    resources = [aws_api_gateway_rest_api.s3_api.execution_arn]
+    resources = [format("%s/*", aws_api_gateway_rest_api.s3_api.execution_arn)]
 
     principals {
       type        = "*"
@@ -30,8 +31,8 @@ data "aws_iam_policy_document" "assume_role_vpc" {
 
     condition {
       test     = "StringEquals"
-      variable = "aws:SourceVpce"
-      values   = [aws_vpc_endpoint.api_gw.id]
+      variable = "aws:sourceVpc"
+      values   = [aws_vpc.main.id]
 
     }
   }
@@ -39,6 +40,10 @@ data "aws_iam_policy_document" "assume_role_vpc" {
 
 data "aws_iam_role" "lambda_iam" {
   name = "lambda_role"
+}
+
+data "aws_iam_role" "api_iam" {
+  name = "api_role"
 }
 
 data "archive_file" "api_lambda_package" {

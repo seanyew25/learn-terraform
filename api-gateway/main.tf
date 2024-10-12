@@ -141,10 +141,10 @@ resource "aws_lambda_function" "books_lambda" {
 }
 
 # api role
-# resource "aws_iam_role" "api_role" {
-#   name               = "api_role"
-#   assume_role_policy = data.aws_iam_policy_document.assume_role_api.json
-# }
+resource "aws_iam_role" "api_role" {
+  name               = "api_role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_api.json
+}
 
 # permission for lambda to access api
 resource "aws_iam_role_policy_attachment" "access_api_policy" {
