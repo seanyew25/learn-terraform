@@ -14,12 +14,12 @@ output "elastic_ip" {
   value       = data.aws_eips.elastic_ip
 }
 
-output "assume_role_vpc" {
-  description = "assume role for vpc"
-  value       = data.aws_iam_policy_document.assume_role_vpc.json
-}
+# output "assume_role_vpc" {
+#   description = "assume role for vpc"
+#   value       = data.aws_iam_policy_document.assume_role_vpc.json
+# }
 
-output "api_iam" {
-  description = "api iam"
-  value = data.aws_iam_role.api_iam.arn
-}
+# output "api_iam" {
+#   description = "api iam"
+#   value = data.aws_iam_role.api_iam.arn
+# }

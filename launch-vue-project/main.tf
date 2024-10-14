@@ -165,102 +165,102 @@ resource "aws_eip_association" "eip_assoc" {
   allocation_id        = data.aws_eips.elastic_ip.allocation_ids[0]
 }
 
-resource "aws_security_group" "vpc_endpoint" {
-  name        = "endpoint"
-  description = "security group for vpc endpoint"
-  vpc_id      = aws_vpc.main.id
+# resource "aws_security_group" "vpc_endpoint" {
+#   name        = "endpoint"
+#   description = "security group for vpc endpoint"
+#   vpc_id      = aws_vpc.main.id
 
-}
+# }
 
-resource "aws_vpc_security_group_ingress_rule" "endpoint_allow_https" {
-  security_group_id = aws_security_group.vpc_endpoint.id
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
-}
+# resource "aws_vpc_security_group_ingress_rule" "endpoint_allow_https" {
+#   security_group_id = aws_security_group.vpc_endpoint.id
+#   from_port         = 443
+#   to_port           = 443
+#   ip_protocol       = "tcp"
+#   cidr_ipv4         = "0.0.0.0/0"
+# }
 
-resource "aws_vpc_security_group_ingress_rule" "endpoint_allow_http" {
-  security_group_id = aws_security_group.vpc_endpoint.id
-  from_port         = 80
-  to_port           = 80
-  ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
-}
+# resource "aws_vpc_security_group_ingress_rule" "endpoint_allow_http" {
+#   security_group_id = aws_security_group.vpc_endpoint.id
+#   from_port         = 80
+#   to_port           = 80
+#   ip_protocol       = "tcp"
+#   cidr_ipv4         = "0.0.0.0/0"
+# }
 
-resource "aws_vpc_security_group_egress_rule" "endpoint_allow_all_egress_traffic" {
-  security_group_id = aws_security_group.vpc_endpoint.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
-}
+# resource "aws_vpc_security_group_egress_rule" "endpoint_allow_all_egress_traffic" {
+#   security_group_id = aws_security_group.vpc_endpoint.id
+#   cidr_ipv4         = "0.0.0.0/0"
+#   ip_protocol       = "-1" # semantically equivalent to all ports
+# }
 
-resource "aws_vpc_endpoint" "api_gw" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.ap-southeast-1.execute-api"
-  vpc_endpoint_type = "Interface"
-  private_dns_enabled = true
-  tags = {
-    Name = "api-gateway"
-  }
-  subnet_configuration {
-    ipv4      = "10.0.2.10"
-    subnet_id = aws_subnet.private_subnet.id
-  }
-  subnet_ids         = [aws_subnet.private_subnet.id]
-  security_group_ids = [aws_security_group.vpc_endpoint.id]
+# resource "aws_vpc_endpoint" "api_gw" {
+#   vpc_id            = aws_vpc.main.id
+#   service_name      = "com.amazonaws.ap-southeast-1.execute-api"
+#   vpc_endpoint_type = "Interface"
+#   private_dns_enabled = true
+#   tags = {
+#     Name = "api-gateway"
+#   }
+#   subnet_configuration {
+#     ipv4      = "10.0.2.10"
+#     subnet_id = aws_subnet.private_subnet.id
+#   }
+#   subnet_ids         = [aws_subnet.private_subnet.id]
+#   security_group_ids = [aws_security_group.vpc_endpoint.id]
 
-}
+# }
 
-resource "aws_api_gateway_rest_api" "s3_api" {
-  name = "s3-api"
-  description = "api to create pre-signed urls with s3"
+# resource "aws_api_gateway_rest_api" "s3_api" {
+#   name = "s3-api"
+#   description = "api to create pre-signed urls with s3"
 
-  endpoint_configuration {
-    types            = ["PRIVATE"]
-    vpc_endpoint_ids = [aws_vpc_endpoint.api_gw.id]
-  }
+#   endpoint_configuration {
+#     types            = ["PRIVATE"]
+#     vpc_endpoint_ids = [aws_vpc_endpoint.api_gw.id]
+#   }
 
-}
+# }
 
-resource "aws_api_gateway_resource" "s3_resource" {
-  parent_id   = aws_api_gateway_rest_api.s3_api.root_resource_id
-  path_part   = "img"
-  rest_api_id = aws_api_gateway_rest_api.s3_api.id
-}
+# resource "aws_api_gateway_resource" "s3_resource" {
+#   parent_id   = aws_api_gateway_rest_api.s3_api.root_resource_id
+#   path_part   = "img"
+#   rest_api_id = aws_api_gateway_rest_api.s3_api.id
+# }
 
-resource "aws_api_gateway_method" "s3" {
-  authorization = "NONE"
-  http_method   = "ANY"
-  resource_id   = aws_api_gateway_resource.s3_resource.id
-  rest_api_id   = aws_api_gateway_rest_api.s3_api.id
-}
+# resource "aws_api_gateway_method" "s3" {
+#   authorization = "NONE"
+#   http_method   = "ANY"
+#   resource_id   = aws_api_gateway_resource.s3_resource.id
+#   rest_api_id   = aws_api_gateway_rest_api.s3_api.id
+# }
 
-# create resource policy for vpc to access this api
-resource "aws_api_gateway_rest_api_policy" "rest_api" {
-  rest_api_id = aws_api_gateway_rest_api.s3_api.id
-  policy      = jsonencode({    
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Deny",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": "execute-api:/*",
-            "Condition": {
-                "StringNotEquals": {
-                    "aws:sourceVpce": "${aws_vpc_endpoint.api_gw.id}"
-                }
-            }
-        },
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "execute-api:Invoke",
-            "Resource": "execute-api:/*"
-        }
-     ]
-  })
-}
+# # create resource policy for vpc to access this api and to deny all others access to it
+# resource "aws_api_gateway_rest_api_policy" "rest_api" {
+#   rest_api_id = aws_api_gateway_rest_api.s3_api.id
+#   policy      = jsonencode({    
+#     "Version": "2012-10-17",
+#     "Statement": [
+#         {
+#             "Effect": "Deny",
+#             "Principal": "*",
+#             "Action": "execute-api:Invoke",
+#             "Resource": "execute-api:/*",
+#             "Condition": {
+#                 "StringNotEquals": {
+#                     "aws:sourceVpce": "${aws_vpc_endpoint.api_gw.id}"
+#                 }
+#             }
+#         },
+#         {
+#             "Effect": "Allow",
+#             "Principal": "*",
+#             "Action": "execute-api:Invoke",
+#             "Resource": "execute-api:/*"
+#         }
+#      ]
+#   })
+# }
 
 resource "aws_s3_bucket" "img-storage" {
   bucket = "img-storage"
@@ -269,148 +269,148 @@ resource "aws_s3_bucket" "img-storage" {
     Name = "website_img_storage"
   }
 }
-resource "aws_iam_policy" "crud_s3" {
-  name = "crud_s3"
-  path = "/"
-  description = "policy to allow crud operations on s3"
+# resource "aws_iam_policy" "crud_s3" {
+#   name = "crud_s3"
+#   path = "/"
+#   description = "policy to allow crud operations on s3"
 
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement: [
-      {
-        Effect: "Allow",
-        Action: [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ],
-        Resource: [
-          "${aws_s3_bucket.img-storage.arn}/*"
-        ]
-      }
-    ]
-  })
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement: [
+#       {
+#         Effect: "Allow",
+#         Action: [
+#           "s3:GetObject",
+#           "s3:PutObject",
+#           "s3:DeleteObject"
+#         ],
+#         Resource: [
+#           "${aws_s3_bucket.img-storage.arn}/*"
+#         ]
+#       }
+#     ]
+#   })
 
-}
-resource "aws_iam_role_policy_attachment" "attach_to_s3" {
-  role = data.aws_iam_role.lambda_iam.name
-  policy_arn = aws_iam_policy.crud_s3.arn
-}
+# }
+# resource "aws_iam_role_policy_attachment" "attach_to_s3" {
+#   role = data.aws_iam_role.lambda_iam.name
+#   policy_arn = aws_iam_policy.crud_s3.arn
+# }
 
-resource "aws_lambda_function" "img_lambda" {
-  filename      = "generateURL.zip"
-  function_name = "generateURL"
-  role          = data.aws_iam_role.lambda_iam.arn
-  handler = "generateURL.lambda_handler"
-  runtime = "python3.9"
-  source_code_hash = data.archive_file.api_lambda_package.output_base64sha256
-}
+# resource "aws_lambda_function" "img_lambda" {
+#   filename      = "generateURL.zip"
+#   function_name = "generateURL"
+#   role          = data.aws_iam_role.lambda_iam.arn
+#   handler = "generateURL.lambda_handler"
+#   runtime = "python3.9"
+#   source_code_hash = data.archive_file.api_lambda_package.output_base64sha256
+# }
 
-resource "aws_api_gateway_integration" "api_lambda" {
-  rest_api_id             = aws_api_gateway_rest_api.s3_api.id
-  type                    = "AWS_PROXY"
-  resource_id             = aws_api_gateway_resource.s3_resource.id
-  http_method             = aws_api_gateway_method.s3.http_method
-  uri                     = aws_lambda_function.img_lambda.invoke_arn
-  integration_http_method = "POST"
-}
+# resource "aws_api_gateway_integration" "api_lambda" {
+#   rest_api_id             = aws_api_gateway_rest_api.s3_api.id
+#   type                    = "AWS_PROXY"
+#   resource_id             = aws_api_gateway_resource.s3_resource.id
+#   http_method             = aws_api_gateway_method.s3.http_method
+#   uri                     = aws_lambda_function.img_lambda.invoke_arn
+#   integration_http_method = "POST"
+# }
 
-resource "aws_api_gateway_method_response" "proxy" {
+# resource "aws_api_gateway_method_response" "proxy" {
 
-  rest_api_id = aws_api_gateway_rest_api.s3_api.id
+#   rest_api_id = aws_api_gateway_rest_api.s3_api.id
 
-  resource_id = aws_api_gateway_resource.s3_resource.id
+#   resource_id = aws_api_gateway_resource.s3_resource.id
 
-  http_method = aws_api_gateway_method.s3.http_method
+#   http_method = aws_api_gateway_method.s3.http_method
 
-  status_code = "200"
-
-
-
-  //cors section
-
-  response_parameters = {
-
-    "method.response.header.Access-Control-Allow-Headers" = true,
-
-    "method.response.header.Access-Control-Allow-Methods" = true,
-
-    "method.response.header.Access-Control-Allow-Origin" = true
-
-  }
-
-}
+#   status_code = "200"
 
 
-resource "aws_api_gateway_deployment" "s3_api" {
-  rest_api_id = aws_api_gateway_rest_api.s3_api.id
-  # stage_name = "dev"
-  triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_method.s3.id,
-      aws_api_gateway_resource.s3_resource.id,
-      data.aws_iam_policy_document.assume_role_vpc.json
-    ]))
-  }
-}
 
-resource "aws_api_gateway_stage" "s3_api_stage" {
-  deployment_id = aws_api_gateway_deployment.s3_api.id
-  rest_api_id   = aws_api_gateway_rest_api.s3_api.id
-  stage_name    = "dev"
-  lifecycle {
-    replace_triggered_by = [ aws_api_gateway_deployment.s3_api ]
-  }
-}
+#   //cors section
 
-resource "aws_api_gateway_method_settings" "logging" {
-  rest_api_id = aws_api_gateway_rest_api.s3_api.id
-  stage_name  = aws_api_gateway_stage.s3_api_stage.stage_name
-  method_path = "*/*"
+#   response_parameters = {
 
-  settings {
-    metrics_enabled = true
-    logging_level   = "INFO"
-    data_trace_enabled = true
-  }
-}
+#     "method.response.header.Access-Control-Allow-Headers" = true,
 
-resource "aws_iam_role_policy_attachment" "api_logging_permissions" {
-  role       = data.aws_iam_role.api_iam.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
-}
+#     "method.response.header.Access-Control-Allow-Methods" = true,
 
-resource "aws_iam_policy" "log_perm" {
-  name = "logging_to_cloudfront"
-  path = "/"
-  description = "policy to allow logging"
+#     "method.response.header.Access-Control-Allow-Origin" = true
 
-  policy = jsonencode({
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "*"
-        }
-    ]
-  })
+#   }
 
-}
+# }
 
-resource "aws_iam_role_policy_attachment" "attach_to_api" {
-  role = data.aws_iam_role.api_iam.name
-  policy_arn = aws_iam_policy.log_perm.arn
-}
 
-# tell api gateway to use this role for logging
-resource "aws_api_gateway_account" "s3_api" {
-  cloudwatch_role_arn = data.aws_iam_role.api_iam.arn
-}
+# resource "aws_api_gateway_deployment" "s3_api" {
+#   rest_api_id = aws_api_gateway_rest_api.s3_api.id
+#   # stage_name = "dev"
+#   triggers = {
+#     redeployment = sha1(jsonencode([
+#       aws_api_gateway_method.s3.id,
+#       aws_api_gateway_resource.s3_resource.id,
+#       data.aws_iam_policy_document.assume_role_vpc.json
+#     ]))
+#   }
+# }
+
+# resource "aws_api_gateway_stage" "s3_api_stage" {
+#   deployment_id = aws_api_gateway_deployment.s3_api.id
+#   rest_api_id   = aws_api_gateway_rest_api.s3_api.id
+#   stage_name    = "dev"
+#   lifecycle {
+#     replace_triggered_by = [ aws_api_gateway_deployment.s3_api ]
+#   }
+# }
+
+# resource "aws_api_gateway_method_settings" "logging" {
+#   rest_api_id = aws_api_gateway_rest_api.s3_api.id
+#   stage_name  = aws_api_gateway_stage.s3_api_stage.stage_name
+#   method_path = "*/*"
+
+#   settings {
+#     metrics_enabled = true
+#     logging_level   = "INFO"
+#     data_trace_enabled = true
+#   }
+# }
+
+# resource "aws_iam_role_policy_attachment" "api_logging_permissions" {
+#   role       = data.aws_iam_role.api_iam.name
+#   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
+# }
+
+# resource "aws_iam_policy" "log_perm" {
+#   name = "logging_to_cloudfront"
+#   path = "/"
+#   description = "policy to allow logging"
+
+#   policy = jsonencode({
+#     "Version": "2012-10-17",
+#     "Statement": [
+#         {
+#             "Effect": "Allow",
+#             "Action": [
+#                 "logs:CreateLogGroup",
+#                 "logs:CreateLogStream",
+#                 "logs:PutLogEvents"
+#             ],
+#             "Resource": "*"
+#         }
+#     ]
+#   })
+
+# }
+
+# resource "aws_iam_role_policy_attachment" "attach_to_api" {
+#   role = data.aws_iam_role.api_iam.name
+#   policy_arn = aws_iam_policy.log_perm.arn
+# }
+
+# # tell api gateway to use this role for logging
+# resource "aws_api_gateway_account" "s3_api" {
+#   cloudwatch_role_arn = data.aws_iam_role.api_iam.arn
+# }
 
 # resource "aws_cloudwatch_log_group" "s3_api" {
 #   name              = "API-Gateway-Execution-Logs_${aws_api_gateway_rest_api.s3_api.id}/${aws_api_gateway_method_settings.logging.stage_name}"
@@ -420,16 +420,16 @@ resource "aws_api_gateway_account" "s3_api" {
 #   }
 # }
 
-resource "aws_lambda_permission" "apigw_lambda" {
+# resource "aws_lambda_permission" "apigw_lambda" {
 
-  statement_id = "AllowExecutionFromAPIGateway"
+#   statement_id = "AllowExecutionFromAPIGateway"
 
-  action = "lambda:InvokeFunction"
+#   action = "lambda:InvokeFunction"
 
-  function_name = aws_lambda_function.img_lambda.function_name
+#   function_name = aws_lambda_function.img_lambda.function_name
 
-  principal = "apigateway.amazonaws.com"
+#   principal = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_api_gateway_rest_api.s3_api.execution_arn}/*"
+#   source_arn = "${aws_api_gateway_rest_api.s3_api.execution_arn}/*"
 
-}
+# }
